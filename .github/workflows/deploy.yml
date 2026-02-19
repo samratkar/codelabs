@@ -60,14 +60,57 @@ jobs:
               print(f'  - {e["name"]} -> {e["url"]}')
           SCRIPT
 
-      - name: Commit entries.json
+      - name: Patch home-url in codelab HTML files
+        run: |
+          python3 << 'SCRIPT'
+          import os, re, glob
+
+          IGNORE = {'.git', '.github', '.nojekyll', '.DS_Store', 'node_modules', 'img', '__pycache__'}
+          patched = []
+
+          for html_path in glob.glob('*/**.html', recursive=True):
+              folder = html_path.split(os.sep)[0]
+              if folder in IGNORE or folder.startswith('.'):
+                  continue
+
+              with open(html_path, 'r') as f:
+                  content = f.read()
+
+              if '<google-codelab' not in content:
+                  continue
+
+              # Already has home-url — skip
+              if re.search(r'<google-codelab[^>]*home-url=', content):
+                  continue
+
+              # Insert home-url="../" into the <google-codelab> tag
+              updated = re.sub(
+                  r'(<google-codelab\b)',
+                  r'\1\n                  home-url="../"',
+                  content,
+                  count=1
+              )
+
+              with open(html_path, 'w') as f:
+                  f.write(updated)
+              patched.append(html_path)
+
+          if patched:
+              print(f'Patched home-url in {len(patched)} file(s):')
+              for p in patched:
+                  print(f'  - {p}')
+          else:
+              print('All codelab HTML files already have home-url set.')
+          SCRIPT
+
+      - name: Commit changes
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add entries.json
+          git add entries.json '*.html'
           if git diff --cached --quiet; then
-            echo "No changes to entries.json"
+            echo "No changes to commit"
           else
-            git commit -m "Update entries.json [skip ci]"
+            git commit -m "Auto-update entries.json and patch codelab home-url [skip ci]"
             git push
           fi
