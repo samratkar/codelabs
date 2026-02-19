@@ -1,4 +1,4 @@
-name: Deploy to GitHub Pages
+name: Update codelab index
 
 on:
   push:
@@ -6,20 +6,11 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
-  pages: write
-  id-token: write
-
-concurrency:
-  group: pages
-  cancel-in-progress: true
+  contents: write
 
 jobs:
-  build-and-deploy:
+  update-entries:
     runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -69,14 +60,14 @@ jobs:
               print(f'  - {e["name"]} -> {e["url"]}')
           SCRIPT
 
-      - name: Setup Pages
-        uses: actions/configure-pages@v4
-
-      - name: Upload artifact
-        uses: actions/upload-pages-artifact@v3
-        with:
-          path: '.'
-
-      - name: Deploy to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v4
+      - name: Commit entries.json
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add entries.json
+          if git diff --cached --quiet; then
+            echo "No changes to entries.json"
+          else
+            git commit -m "Update entries.json [skip ci]"
+            git push
+          fi
