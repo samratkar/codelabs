@@ -83,10 +83,10 @@ jobs:
               if re.search(r'<google-codelab[^>]*home-url=', content):
                   continue
 
-              # Insert home-url="../" into the <google-codelab> tag
+              # Insert home-url="/codelabs/" into the <google-codelab> tag
               updated = re.sub(
                   r'(<google-codelab\b)',
-                  r'\1\n                  home-url="../"',
+                  r'\1\n                  home-url="/codelabs/"',
                   content,
                   count=1
               )
