@@ -60,15 +60,33 @@ jobs:
               print(f'  - {e["name"]} -> {e["url"]}')
           SCRIPT
 
-      - name: Patch home-url in codelab HTML files
+      - name: Patch codelab HTML files with redirect script
         run: |
           python3 << 'SCRIPT'
-          import os, re, glob
+          import os, glob
 
           IGNORE = {'.git', '.github', '.nojekyll', '.DS_Store', 'node_modules', 'img', '__pycache__'}
-          patched = []
+          SNIPPET = '''<script>
+          document.addEventListener('DOMContentLoaded', function() {
+            var defined = window.customElements.whenDefined('google-codelab');
+            defined.then(function() {
+              requestAnimationFrame(function() {
+                var done = document.querySelector('#done');
+                var back = document.querySelector('#arrow-back');
+                if (done) done.setAttribute('href', '/codelabs/');
+                if (back) back.setAttribute('href', '/codelabs/');
+                new MutationObserver(function() {
+                  if (done) done.setAttribute('href', '/codelabs/');
+                  if (back) back.setAttribute('href', '/codelabs/');
+                }).observe(document.body, {childList: true, subtree: true});
+              });
+            });
+          });
+          </script>'''
+          MARKER = '<!-- codelabs-home-redirect -->'
 
-          for html_path in glob.glob('*/**.html', recursive=True):
+          patched = []
+          for html_path in glob.glob('*/**/*.html', recursive=True):
               folder = html_path.split(os.sep)[0]
               if folder in IGNORE or folder.startswith('.'):
                   continue
@@ -78,29 +96,20 @@ jobs:
 
               if '<google-codelab' not in content:
                   continue
-
-              # Already has home-url — skip
-              if re.search(r'<google-codelab[^>]*home-url=', content):
+              if MARKER in content:
                   continue
 
-              # Insert home-url="/codelabs/" into the <google-codelab> tag
-              updated = re.sub(
-                  r'(<google-codelab\b)',
-                  r'\1\n                  home-url="/codelabs/"',
-                  content,
-                  count=1
-              )
-
+              content = content.replace('</body>', f'{MARKER}\n{SNIPPET}\n</body>')
               with open(html_path, 'w') as f:
-                  f.write(updated)
+                  f.write(content)
               patched.append(html_path)
 
           if patched:
-              print(f'Patched home-url in {len(patched)} file(s):')
+              print(f'Patched {len(patched)} file(s):')
               for p in patched:
                   print(f'  - {p}')
           else:
-              print('All codelab HTML files already have home-url set.')
+              print('All codelab HTML files already patched.')
           SCRIPT
 
       - name: Commit changes
