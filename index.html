@@ -239,36 +239,10 @@
 
   <script>
     const grid = document.getElementById('grid');
-    const status = document.getElementById('status');
+    const statusEl = document.getElementById('status');
     const count = document.getElementById('count');
     const search = document.getElementById('search');
     let allEntries = [];
-
-    const IGNORE = new Set([
-      'index.html', 'README.md', 'readme.md', '.gitignore',
-      '.nojekyll', '.git', 'CNAME', 'LICENSE', 'node_modules',
-      '.DS_Store', 'img', '.github'
-    ]);
-
-    function getRepoInfo() {
-      const host = window.location.hostname;
-      const pathParts = window.location.pathname.split('/').filter(Boolean);
-      let owner = '';
-      let repo = '';
-      let basePath = '';
-
-      if (host.endsWith('github.io')) {
-        owner = host.split('.')[0];
-        if (pathParts.length > 0) {
-          repo = pathParts[0];
-          basePath = `/${pathParts[0]}`;
-        } else {
-          repo = `${owner}.github.io`;
-        }
-      }
-
-      return { owner, repo, basePath };
-    }
 
     function formatName(name) {
       return name
@@ -277,48 +251,13 @@
     }
 
     async function loadColabs() {
-      const { owner, repo, basePath } = getRepoInfo();
-      const apiUrl = `https://api.github.com/repos/${owner}/${repo}/contents/`;
-
       try {
-        const res = await fetch(apiUrl);
-        if (!res.ok) {
-          throw new Error(`GitHub API responded with ${res.status}`);
-        }
-        const items = await res.json();
-        const entries = [];
-
-        const dirs = items.filter((item) => item.type === 'dir' && !IGNORE.has(item.name));
-
-        const dirFetches = dirs.map(async (item) => {
-          const childApi = `https://api.github.com/repos/${owner}/${repo}/contents/${item.name}`;
-          const childRes = await fetch(childApi);
-          if (childRes.ok) {
-            const childItems = await childRes.json();
-            const indexHtml = childItems.find((child) => child.type === 'file' && child.name === 'index.html');
-            const firstHtml = childItems.find((child) => child.type === 'file' && child.name.endsWith('.html'));
-            const target = indexHtml || firstHtml;
-            if (target) {
-              return {
-                name: item.name,
-                url: `${basePath}/${item.name}/${target.name}`,
-                type: 'folder'
-              };
-            }
-          }
-          return null;
-        });
-
-        const results = await Promise.all(dirFetches);
-        for (const entry of results) {
-          if (entry) entries.push(entry);
-        }
-
-        entries.sort((a, b) => a.name.localeCompare(b.name));
-        allEntries = entries;
+        const res = await fetch('./entries.json');
+        if (!res.ok) throw new Error(`Failed to load entries.json: ${res.status}`);
+        allEntries = await res.json();
         render(allEntries);
       } catch (err) {
-        status.textContent = 'Unable to load list from GitHub API. Check if the repo is public and try again.';
+        statusEl.textContent = 'Unable to load codelab entries.';
         count.textContent = '0 items';
       }
     }
@@ -328,9 +267,9 @@
       grid.innerHTML = '';
 
       if (filtered.length === 0) {
-        status.textContent = 'No codelabs matched your filter.';
+        statusEl.textContent = 'No codelabs matched your filter.';
       } else {
-        status.textContent = '';
+        statusEl.textContent = '';
       }
 
       for (const entry of filtered) {
