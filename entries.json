@@ -2,9 +2,5 @@
   {
     "name": "drl-1-intro",
     "url": "./drl-1-intro/index.html"
-  },
-  {
-    "name": "speed-predictor",
-    "url": "./speed-predictor/speed-predictor.html"
   }
 ]
