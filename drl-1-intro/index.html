@@ -658,5 +658,23 @@
     await mermaid.run({ querySelector: ".mermaid" });
   });
   </script>
+<!-- codelabs-home-redirect -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  var defined = window.customElements.whenDefined('google-codelab');
+  defined.then(function() {
+    requestAnimationFrame(function() {
+      var done = document.querySelector('#done');
+      var back = document.querySelector('#arrow-back');
+      if (done) done.setAttribute('href', '/codelabs/');
+      if (back) back.setAttribute('href', '/codelabs/');
+      new MutationObserver(function() {
+        if (done) done.setAttribute('href', '/codelabs/');
+        if (back) back.setAttribute('href', '/codelabs/');
+      }).observe(document.body, {childList: true, subtree: true});
+    });
+  });
+});
+</script>
 </body>
 </html>
